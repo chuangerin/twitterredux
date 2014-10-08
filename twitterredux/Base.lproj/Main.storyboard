@@ -395,6 +395,9 @@
                                     <color key="titleColor" cocoaTouchSystemColor="darkTextColor"/>
                                     <color key="titleShadowColor" white="0.5" alpha="1" colorSpace="calibratedWhite"/>
                                 </state>
+                                <connections>
+                                    <action selector="onMentions:" destination="M4E-9v-XKp" eventType="touchUpInside" id="BMs-kw-cXm"/>
+                                </connections>
                             </button>
                             <view contentMode="scaleToFill" ambiguous="YES" misplaced="YES" translatesAutoresizingMaskIntoConstraints="NO" id="u7B-Vm-FeB">
                                 <rect key="frame" x="10" y="140" width="300" height="2"/>

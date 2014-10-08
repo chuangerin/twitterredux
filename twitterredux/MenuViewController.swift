@@ -8,11 +8,17 @@
 
 import UIKit
 
+@objc protocol MenuDelegate {
+    func menuItemSelected(menuItem: String)
+}
+
 class MenuViewController: UIViewController {
 
     @IBOutlet weak var profileImage: UIImageView!
     @IBOutlet weak var nameLabel: UILabel!
     @IBOutlet weak var screenNameLabel: UILabel!
+    
+    var delegate:MenuDelegate? = nil
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -34,15 +40,23 @@ class MenuViewController: UIViewController {
     }
     
     @IBAction func onTimeline(sender: AnyObject) {
-        let vc = self.parentViewController as ContainerViewController
-        vc.switchView("timeline")
+        if delegate != nil {
+            delegate!.menuItemSelected("timeline")
+        }
+    }
+    
+    @IBAction func onMentions(sender: AnyObject) {
+        if delegate != nil {
+            delegate!.menuItemSelected("mentions")
+        }
     }
     
     @IBAction func onTap(sender: UITapGestureRecognizer) {
-        let vc = self.parentViewController as ContainerViewController
-        vc.switchView("profile")
+        if delegate != nil {
+            delegate!.menuItemSelected("profile")
+        }
     }
-    
+        
     @IBAction func onSignOut(sender: AnyObject) {
         User.currentUser?.logout()
     }

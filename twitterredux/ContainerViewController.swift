@@ -8,12 +8,12 @@
 
 import UIKit
 
-class ContainerViewController: UIViewController {
+class ContainerViewController: UIViewController, MenuDelegate, TweetsDelegate {
     var menuViewController : UIViewController!
     var activeViewController : UIViewController!
     var previousViewController : UIViewController!
     var subcontrollers : [String: UIViewController]!
-    var startX : CGFloat = 0
+    var selectedViewName : String = ""
     
     @IBOutlet var containerView: UIView!
     @IBOutlet var swipeRightGest: UISwipeGestureRecognizer!
@@ -21,14 +21,22 @@ class ContainerViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
         var storyboard = UIStoryboard(name: "Main", bundle: nil)
+        var tweetsViewController = storyboard.instantiateViewControllerWithIdentifier("TweetsViewController") as UIViewController
         self.subcontrollers = [
             "menu" : storyboard.instantiateViewControllerWithIdentifier("MenuViewController") as UIViewController,
-            "timeline" : storyboard.instantiateViewControllerWithIdentifier("TweetsViewController") as UIViewController,
-            "profile" : storyboard.instantiateViewControllerWithIdentifier("ProfileViewController") as UIViewController
+            "timeline" : tweetsViewController,
+            "profile" : storyboard.instantiateViewControllerWithIdentifier("ProfileViewController") as UIViewController,
+            "mentions" : tweetsViewController
         ]
+        
         self.menuViewController = self.subcontrollers["menu"]
-        self.activeViewController = self.subcontrollers["timeline"]
+        let mvc = self.menuViewController as MenuViewController
+        mvc.delegate = self
+        let tvc = tweetsViewController as TweetsViewController
+        tvc.delegate = self
+        self.activeViewController = tweetsViewController
         self.addChildViewController(self.activeViewController)
         containerView.addSubview(self.activeViewController.view)
         // Do any additional setup after loading the view.
@@ -39,88 +47,81 @@ class ContainerViewController: UIViewController {
         // Dispose of any resources that can be recreated.
     }
     
-    @IBAction func onPan(sender: UIPanGestureRecognizer) {
-        var location =  sender.locationInView(view)
-        /*
-        if (sender.state == UIGestureRecognizerState.Began) {
-            //println("begin: \(location.x)")
-            startX = location.x
-            if activeView != menuView {
-                menuView.frame.origin.x = -self.view.frame.width
-                containerView.addSubview(menuView)
-                activeView = menuView
-            } else {
-                activeView = nil
-            }
-            //menuViewController.view.frame.origin.x = -self.view.frame.width
-            //containerView.addSubview(menuViewController.view)
-        } else if (sender.state == UIGestureRecognizerState.Changed) {
-            if activeView != menuView {
-                menuView.frame.origin.x = location.x - startX
-            } else {
-                menuView.frame.origin.x = -self.view.frame.width + (location.x - startX)
-            }
-            //menuViewController.view.frame.origin.x = -self.view.frame.width + (location.x - startX)
-        } else if (sender.state == UIGestureRecognizerState.Ended) {
-            //println("end: \(location.x)")
-            //var velocity = sender.velocityInView(view)
-            if activeView != menuView {
-                UIView.animateWithDuration(0.5, animations: { () -> Void in
-                    self.menuView.frame.origin.x = self.view.frame.width
-                    //self.menuViewController.view.frame.origin.x = 0
-                    //self.panGest.enabled = false
-                })
-            } else {
-                UIView.animateWithDuration(0.5, animations: { () -> Void in
-                    self.menuView.frame.origin.x = 0
-                    //self.menuViewController.view.frame.origin.x = 0
-                    //self.panGest.enabled = false
-                })
-            }
-        }
-        */
-    }
-
     @IBAction func onSwipeRight(sender: UISwipeGestureRecognizer) {
-        var location = sender.locationInView(view)
+        //var location = sender.locationInView(view)
         if (self.activeViewController != menuViewController) {
             if (sender.state == UIGestureRecognizerState.Ended) {
                 self.previousViewController = self.activeViewController
-                self.handleViewChange(menuViewController)
-                self.activeViewController.view.frame.origin.x = -self.view.frame.width
-                UIView.animateWithDuration(0.5, animations: { () -> Void in
-                    self.activeViewController.view.frame.origin.x = 0
-                })
+                handleViewChange(menuViewController, animateView: menuViewController.view, startX: -view.frame.width, endX: 0)
             }
         }
     }
     
     @IBAction func onSwipeLeft(sender: UISwipeGestureRecognizer) {
         if (sender.state == UIGestureRecognizerState.Ended) {
-            if (self.activeViewController == menuViewController) {
-                self.activeViewController.view.frame.origin.x = 0
+            if (activeViewController == menuViewController) {
+                /*
                 UIView.animateWithDuration(0.5, animations: { () -> Void in
                     self.activeViewController.view.frame.origin.x = -self.view.frame.width
                     }, completion: { (finished: Bool) -> Void in
-                    self.handleViewChange(self.previousViewController)
+                        self.handleViewChange(self.previousViewController)
                 })
+                */
+                handleViewChange(previousViewController, animateView: menuViewController.view, startX: 0, endX: -view.frame.width)
             }
         }
     }
     
+    func handleViewChange(vc: UIViewController, animateView: UIView, startX: CGFloat, endX: CGFloat) {
+        activeViewController.willMoveToParentViewController(nil)
+        addChildViewController(vc)
+        self.containerView.addSubview(vc.view)
+        if vc.view != animateView {
+            self.containerView.bringSubviewToFront(animateView)
+        }
+        animateView.frame.origin.x = startX
+        UIView.animateWithDuration(0.5, animations: { () -> Void in
+            animateView.frame.origin.x = endX
+            }, completion: { (finished: Bool) -> Void in
+                self.activeViewController.view.removeFromSuperview()
+                self.activeViewController.removeFromParentViewController()
+                self.activeViewController.didMoveToParentViewController(nil)
+                vc.didMoveToParentViewController(self)
+                self.activeViewController = vc
+        })
+    }
+    
     func handleViewChange(vc: UIViewController) {
-        self.activeViewController.willMoveToParentViewController(nil)
+        activeViewController.willMoveToParentViewController(nil)
+        self.activeViewController.view.removeFromSuperview()
         self.activeViewController.removeFromParentViewController()
         self.activeViewController.didMoveToParentViewController(nil)
-        self.addChildViewController(vc)
-        self.activeViewController = vc
-        self.containerView.addSubview(vc.view)
+        addChildViewController(vc)
+        containerView.addSubview(vc.view)
         vc.didMoveToParentViewController(self)
+        self.activeViewController = vc
+    }
+    
+    func menuItemSelected(menuItem: String) {
+        self.switchView(menuItem)
+    }
+    
+    func userHeaderTapped() {
+        self.switchView("profile")
+    }
+    
+    func determineQueryType() -> String {
+        return self.selectedViewName
     }
     
     func switchView(viewName: String) -> Void {
-        var vc = self.subcontrollers[viewName]!
-        self.handleViewChange(vc)
+        selectedViewName = viewName
+        var vc = subcontrollers[viewName]!
+        if activeViewController == menuViewController {
+            handleViewChange(vc, animateView: menuViewController.view, startX: 0, endX: -view.frame.width)
+        } else {
+            self.handleViewChange(vc)
+        }
     }
     
     /*

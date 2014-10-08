@@ -8,6 +8,11 @@
 
 import UIKit
 
+@objc protocol TweetsDelegate {
+    func userHeaderTapped()
+    func determineQueryType() -> String
+}
+
 class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDataSource {
     var tweets: [Tweet]?
     
@@ -15,6 +20,8 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     @IBOutlet weak var profileImage: UIImageView!
     @IBOutlet weak var nameLabel: UILabel!
     @IBOutlet weak var screenNameLabel: UILabel!
+    
+    var delegate : TweetsDelegate? = nil
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -33,22 +40,16 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
         tableView.dataSource = self
         tableView.estimatedRowHeight = 75
         tableView.rowHeight = UITableViewAutomaticDimension
-        
-        TwitterClient.sharedInstance.homeTimelineWithParams(nil, completion: { (tweets, error) -> () in
-            if (tweets != nil) {
-                println("\(tweets!.count) tweets")
-            } else {
-                println("no tweets")
-            }
-            self.tweets = tweets
-            self.tableView.reloadData()
-        })
     }
-    
     
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
+    }
+    
+    override func viewWillAppear(animated: Bool) {
+        super.viewWillAppear(animated)
+        self.fetchData()
     }
     
     func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -76,10 +77,36 @@ class TweetsViewController: UIViewController, UITableViewDelegate, UITableViewDa
     func tableView(tableView: UITableView, didSelectRowAtIndexPath indexPath: NSIndexPath) {
         tableView.deselectRowAtIndexPath(indexPath, animated: true)
     }
-    
+        
     @IBAction func onTap(sender: UITapGestureRecognizer) {
-        let vc = self.parentViewController as ContainerViewController
-        vc.switchView("profile")
+        if delegate != nil {
+            delegate!.userHeaderTapped()
+        }
+    }
+    
+    func fetchData() {
+        let queryType = (delegate == nil) ? "timeline" : delegate!.determineQueryType()
+        if queryType == "mentions" {
+            TwitterClient.sharedInstance.mentionsTimelineWithParams(nil, completion: { (tweets, error) -> () in
+                if (tweets != nil) {
+                    println("\(tweets!.count) mentions")
+                } else {
+                    println("no mentions")
+                }
+                self.tweets = tweets
+                self.tableView.reloadData()
+            })
+        } else {
+            TwitterClient.sharedInstance.homeTimelineWithParams(nil, completion: { (tweets, error) -> () in
+                if (tweets != nil) {
+                    println("\(tweets!.count) tweets")
+                } else {
+                    println("no tweets")
+                }
+                self.tweets = tweets
+                self.tableView.reloadData()
+            })
+        }
     }
     
     /*
